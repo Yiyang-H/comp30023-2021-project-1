@@ -1,6 +1,8 @@
 #ifndef PQUEUE_H
 #define PQUEUE_H
 
+#include <stdbool.h>
+
 // Defines a priority queue data structure
 typedef struct pqueue Pqueue;
 typedef struct node Node;
@@ -13,12 +15,18 @@ typedef struct pqueue {
 }Pqueue;
 
 typedef struct process {
-    int process_id;
-    int time_remain;
+    unsigned int time_arrived;
+    unsigned int process_id;
+    unsigned int execution_time;
+    bool parallelisable;
+    unsigned int subprocess_id;
+    unsigned int time_remain;
+    unsigned int time_finished;
 }Process;
 
 typedef struct node {
-    Process process;
+    Process *process;
+    Node *prev;
     Node *next;
 }Node;
 
@@ -28,8 +36,8 @@ Pqueue *new_queue();
 
 void free_queue(Pqueue *queue);
 
-void push(Pqueue *queue, Process process);
+void push(Pqueue *queue, Process *process);
 
-Process pop(Pqueue *queue);
+Process *pop(Pqueue *queue);
 
 #endif

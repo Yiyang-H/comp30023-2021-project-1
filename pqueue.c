@@ -7,6 +7,7 @@
 
 void free_node(Node *node);
 Node *new_node();
+bool compare_process(Process *p1, Process *p2);
 
 Pqueue *new_queue() {
     Pqueue *queue = malloc(sizeof(*queue));
@@ -35,7 +36,7 @@ void free_queue(Pqueue *queue) {
 }
 
 // Push a process onto the queue according to their remaining time
-void push(Pqueue *queue, Process process) {
+void push(Pqueue *queue, Process *process) {
     assert(queue != NULL);
     
     Node *node = new_node();
@@ -44,29 +45,57 @@ void push(Pqueue *queue, Process process) {
     if(queue->size == 0) {
         queue->start = node;
         queue->end = node;
+        node->prev = NULL;
         node->next = NULL;
+        queue->size++;
         return;
     }
 
     Node *cur = queue->start;
-
-    // If the queue has at least one item, find a suitable position
-    while(cur->process.time_remain < process.time_remain) {
-        cur = cur->next;
+    // Check if the new process is the start of the queue
+    if(!compare_process(cur->process,process)) {
+        queue->start = node;
+        node->next = cur;
+        cur->prev = node;
+    }else{
+        // If the queue has at least one item, find a suitable position
+        while(compare_process(cur->process,process)) {
+            if(queue->end == cur) {
+                break;
+            }
+            cur = cur->next;
+        }
+        node->next = cur->next;
+        node->prev = cur;
+        cur->next = node;
     }
-    // Not considering the end yet
 
-    node->next = cur;
-    cur = node; // Is this correct?
+    if(queue->end == cur) {
+        queue->end = node;
+    }
 
     // increment the size of the queue
     queue->size++;
 }
 
 // Pop the start of the queue(lowest remaining time)
-Process pop(Pqueue *queue) {
+Process *pop(Pqueue *queue) {
+    
+    Node *node = queue->start;
+    Process *p = node->process;
+
+    if(queue->size == 1) {
+        queue->start = NULL;
+        queue->end = NULL;
+    }else {
+        queue->start = node->next;
+        queue->start->prev = NULL;
+    }
+
+    free_node(node);
+    
     queue->size--;
-    return queue->start->process;
+    return p;
 }
 
 void free_node(Node *node) {
@@ -80,3 +109,14 @@ Node *new_node() {
     return node;
 }
 
+// Compare two process and return true if p1 should be in front of p2
+bool compare_process(Process *p1, Process *p2){
+    int diff = p1->time_remain - p2->time_remain;
+    if(diff < 0) {
+        return true;
+    }
+    if(diff == 0) {
+        return p1->process_id < p2->process_id;
+    }
+    return false;
+}
