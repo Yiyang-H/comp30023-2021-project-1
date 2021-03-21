@@ -1,1 +1,4 @@
 allocate
+allocate.o
+cpu.o
+pqueue.o
