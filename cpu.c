@@ -28,5 +28,14 @@ unsigned int total_time_remain(CPU* cpu) {
     }
 
     return total_time;
+}
 
+CPU *soonest_cpu(CPU *cpu, int num) {
+    CPU *min = cpu;
+    for(int i = 1; i < num; i++) {
+        if(total_time_remain(cpu + i) < total_time_remain(min)) {
+            min = cpu + i;
+        }
+    }
+    return min;
 }

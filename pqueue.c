@@ -65,6 +65,9 @@ void push(Pqueue *queue, Process *process) {
             }
             cur = cur->next;
         }
+        if(queue->end != cur) {
+            cur = cur->prev;
+        }
         node->next = cur->next;
         node->prev = cur;
         cur->next = node;
@@ -111,12 +114,11 @@ Node *new_node() {
 
 // Compare two process and return true if p1 should be in front of p2
 bool compare_process(Process *p1, Process *p2){
-    int diff = p1->time_remain - p2->time_remain;
-    if(diff < 0) {
+    if(p1->time_remain < p2->time_remain) {
         return true;
     }
-    if(diff == 0) {
-        return p1->process_id < p2->process_id;
+    if(p1->time_remain > p2->time_remain) {
+        return false;
     }
-    return false;
+    return p1->process_id < p2->process_id;
 }

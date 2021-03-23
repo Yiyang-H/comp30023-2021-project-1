@@ -19,6 +19,8 @@ typedef struct cpu {
 
 unsigned int total_time_remain(CPU* cpu);
 
+CPU *soonest_cpu(CPU *cpu, int num);
+
 
 
 

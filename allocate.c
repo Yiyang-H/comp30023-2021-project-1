@@ -15,6 +15,7 @@ void task_4(CPU*, int, Process*, int);
 
 int count_line(char*);
 void print_statistics(Process*, int, int);
+void print_queue(Pqueue*);
 
 
 int main(int argc, char** argv) {
@@ -89,46 +90,50 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
         // Push all current process onto cpu's queue
         while(main->size > 0) {
             Process *temp = pop(main);
-            if(num_processors == 1) {
-                push(processors[0].queue,temp);
-            }else if(num_processors == 2){
-                if(total_time_remain(processors) <= total_time_remain(processors + 1)) {
-                    push(processors[0].queue,temp);
-                }else {
-                    push(processors[1].queue,temp);
-                }
+            if(!(temp->parallelisable)) {
+                CPU *tem = soonest_cpu(processors, num_processors);
+                push(tem->queue, temp);
+            }
+//             if(num_processors == 1) {
+//                 push(processors[0].queue,temp);
+//             }else if(num_processors == 2){
+//                 if(total_time_remain(processors) <= total_time_remain(processors + 1)) {
+//                     push(processors[0].queue,temp);
+//                 }else {
+//                     push(processors[1].queue,temp);
+//                 }
 
 
-/*                 if(temp->parallelisable) {
-                    int k;
-                    unsigned int x = temp->execution_time;
-                    if(num_processors == 2) {
-                        k = 2;
-                    }else {
-                        k = num_processors > x ? x : num_processors;
-                    }
-                    unsigned int subprocess_execution = ceil(x / k) + 1;
+// /*                 if(temp->parallelisable) {
+//                     int k;
+//                     unsigned int x = temp->execution_time;
+//                     if(num_processors == 2) {
+//                         k = 2;
+//                     }else {
+//                         k = num_processors > x ? x : num_processors;
+//                     }
+//                     unsigned int subprocess_execution = ceil(x / k) + 1;
 
-                    // Create k subprocesses
-                    for(int i = 0; i < k; i++) {
-                        Process *subprocess = malloc(sizeof(*subprocess));
-                        *subprocess = *temp;
-                        subprocess->parallelisable = false;
-                        subprocess->parent_process = temp;
-                        subprocess->subprocess_id = i;
-                        subprocess->execution_time = subprocess_execution;
-                        subprocess->time_remain = subprocess_execution;
-                        new_process(soonest_cpu())
-                    }
-                    // what happen when execution_time == 1?
-                    // Set subprocess_id of cpu to 0 and 1
-                    // Set time_remain
-                     */
-               // }
+//                     // Create k subprocesses
+//                     for(int i = 0; i < k; i++) {
+//                         Process *subprocess = malloc(sizeof(*subprocess));
+//                         *subprocess = *temp;
+//                         subprocess->parallelisable = false;
+//                         subprocess->parent_process = temp;
+//                         subprocess->subprocess_id = i;
+//                         subprocess->execution_time = subprocess_execution;
+//                         subprocess->time_remain = subprocess_execution;
+//                         new_process(soonest_cpu())
+//                     }
+//                     // what happen when execution_time == 1?
+//                     // Set subprocess_id of cpu to 0 and 1
+//                     // Set time_remain
+//                      */
+//                // }
 
                 
 
-            }
+//             }
         }
         // Free the main queue
         free_queue(main);
@@ -166,14 +171,16 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                 if(cpu_current->cur_process == NULL) {
                     
                     cpu_current->cur_process = pop(cpu_current->queue);
-                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=0\n",time,
-                    cpu_current->cur_process->process_id,cpu_current->cur_process->time_remain);
+                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
+                    cpu_current->cur_process->process_id,
+                    cpu_current->cur_process->time_remain,cpu_current->cpu_id);
 
                 }else if(compare_process(cpu_current->queue->start->process,cpu_current->cur_process)) {
                     push(cpu_current->queue, cpu_current->cur_process);
                     cpu_current->cur_process = pop(cpu_current->queue);
-                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=0\n",time,
-                    cpu_current->cur_process->process_id,cpu_current->cur_process->time_remain);
+                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
+                    cpu_current->cur_process->process_id,
+                    cpu_current->cur_process->time_remain,cpu_current->cpu_id);
                 }
             }
             if(cpu_current->cur_process != NULL) {
@@ -228,3 +235,15 @@ void print_statistics(Process* all_processes, int num_processes, int makespan) {
     printf("Makespan %d\n",makespan);
 }
 
+void print_queue(Pqueue* queue) {
+    if(queue->size == 0) {
+        printf("This queue has no item");
+        return;
+    }
+    Node *cur = queue->start;
+    while(cur != NULL) {
+        printf("%d",cur->process->process_id);
+        cur = cur->next;
+    }
+    printf("\n");
+}
