@@ -2,4 +2,4 @@ allocate
 allocate.o
 cpu.o
 pqueue.o
-test_p1_n_1.txt
+testcases

@@ -19,6 +19,7 @@ typedef struct process {
     unsigned int process_id;
     unsigned int execution_time;
     bool parallelisable;
+    Process* parent_process;
     unsigned int subprocess_id;
     unsigned int time_remain;
     unsigned int time_finished;
@@ -39,5 +40,9 @@ void free_queue(Pqueue *queue);
 void push(Pqueue *queue, Process *process);
 
 Process *pop(Pqueue *queue);
+
+bool compare_process(Process *p1, Process *p2);
+
+Process *create_subprocess(Process *parent, int sub_id, int subprocess_execution);
 
 #endif

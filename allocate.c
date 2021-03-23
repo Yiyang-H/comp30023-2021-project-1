@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <math.h>
 
 #include "pqueue.h"
 #include "cpu.h"
 
-// Each stage takes a list of cpu and processes
-void stage_1(CPU*, int, Process*, int);
-void stage_2(CPU*, int, Process*, int);
-void stage_3(CPU*, int, Process*, int);
-void stage_4(CPU*, int, Process*, int);
+// Each task takes a list of cpu and processes
+void task_1(CPU*, int, Process*, int);
+void task_2(CPU*, int, Process*, int);
+void task_3(CPU*, int, Process*, int);
+void task_4(CPU*, int, Process*, int);
 
 int count_line(char*);
 void print_statistics(Process*, int, int);
@@ -33,7 +34,6 @@ int main(int argc, char** argv) {
     CPU processors[num_processors];
     for(int i = 0; i < num_processors; i++) {
         processors[i].cpu_id = i;
-        processors[i].total_time_remain = 0;
         processors[i].cur_process = NULL;
         processors[i].queue = new_queue();
     }
@@ -43,12 +43,20 @@ int main(int argc, char** argv) {
     char par;
     Process all_processes[num_processes];
     for(int i = 0; fscanf(fp,"%u %u %u %c\n",&time_arr,&pro_id,&exe_time,&par) != EOF; i++) {
-        Process tem = {time_arr,pro_id,exe_time,par=='p',0,exe_time,0};
-        all_processes[i] = tem;
+        all_processes[i].time_arrived = time_arr;
+        all_processes[i].process_id = pro_id;
+        all_processes[i].execution_time = exe_time;
+        all_processes[i].parallelisable = (par == 'p');
+        all_processes[i].parent_process = NULL;
+        all_processes[i].subprocess_id = 0;
+        all_processes[i].time_remain = exe_time;
+        all_processes[i].time_finished = 0;
     }
     fclose(fp);
 
-    stage_1(processors,num_processors,all_processes,num_processes);
+
+    task_1(processors,num_processors,all_processes,num_processes);
+    
     
     // Free all memeory allocated to queues
     for(int i = 0; i < num_processors; i++) {
@@ -58,72 +66,130 @@ int main(int argc, char** argv) {
     return 0; 
 }
 
-void stage_1(CPU* processors, int num_processors, Process* all_processes,
+void task_1(CPU* processors, int num_processors, Process* all_processes,
  int num_processes) {
 
-    CPU cpu_0 = processors[0];
-    int processes_executing = 0, total_processes_remaining = 0;
-    for(unsigned int time = 0; time < 1000; time++) {
-        // Check process arrive at this time, push them onto the queue
-        for(int i = processes_executing; i < num_processes; i++) {
+    int processes_arrived = 0, total_processes_remaining = 0;
+    for(unsigned int time = 0; time < 500; time++) {
+
+     //   printf("Time:%d, Process_arrived:%d, Process_remaining:%d\n",time,processes_arrived,total_processes_remaining);
+
+        // Check process arrive at this time, push them onto the main queue
+        Pqueue *main = new_queue();
+        for(int i = processes_arrived; i < num_processes; i++) {
             if(all_processes[i].time_arrived == time) {
-
-              //  Process test = all_processes[i];
-              
-              //  printf("%d %d %d %d\n",time,test.time_arrived,test.process_id,test.time_remain);
-
-                push(cpu_0.queue, all_processes + i);
-                
-
-                processes_executing++;
+                push(main, all_processes + i);
+                processes_arrived++;
                 total_processes_remaining++;
+            }else {
+                break;
             }
-            break;
         }
 
-                // Check any process completed at cur_process time
-        /* Null checking for cur_process process!!                              */
-        if(cpu_0.cur_process != NULL) {
-            if(cpu_0.cur_process->time_remain == 0) {
+        // Push all current process onto cpu's queue
+        while(main->size > 0) {
+            Process *temp = pop(main);
+            if(num_processors == 1) {
+                push(processors[0].queue,temp);
+            }else if(num_processors == 2){
+                if(total_time_remain(processors) <= total_time_remain(processors + 1)) {
+                    push(processors[0].queue,temp);
+                }else {
+                    push(processors[1].queue,temp);
+                }
+
+
+/*                 if(temp->parallelisable) {
+                    int k;
+                    unsigned int x = temp->execution_time;
+                    if(num_processors == 2) {
+                        k = 2;
+                    }else {
+                        k = num_processors > x ? x : num_processors;
+                    }
+                    unsigned int subprocess_execution = ceil(x / k) + 1;
+
+                    // Create k subprocesses
+                    for(int i = 0; i < k; i++) {
+                        Process *subprocess = malloc(sizeof(*subprocess));
+                        *subprocess = *temp;
+                        subprocess->parallelisable = false;
+                        subprocess->parent_process = temp;
+                        subprocess->subprocess_id = i;
+                        subprocess->execution_time = subprocess_execution;
+                        subprocess->time_remain = subprocess_execution;
+                        new_process(soonest_cpu())
+                    }
+                    // what happen when execution_time == 1?
+                    // Set subprocess_id of cpu to 0 and 1
+                    // Set time_remain
+                     */
+               // }
 
                 
 
-                total_processes_remaining--;
-                printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
-                cpu_0.cur_process->process_id,total_processes_remaining);
-                cpu_0.cur_process->time_finished = time;
-
-                cpu_0.cur_process = NULL;
             }
-        // Decrease the time remaining for cur_process process
         }
+        // Free the main queue
+        free_queue(main);
 
+        // Check any current processes are done
+        for(int i = 0; i < num_processors; i++) {
+            Process *current = processors[i].cur_process;
+            if(current != NULL && current->time_remain == 0) {
+             //   if(current->parent_process == NULL) {
+                    total_processes_remaining--;
+                    printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
+                        current->process_id,total_processes_remaining);
+                    current->time_finished = time;
 
-        // Check if any process is waiting to be executed
-        if(cpu_0.queue->size >= 1) {
-            if(cpu_0.cur_process == NULL) {
-                 
-                cpu_0.cur_process = pop(cpu_0.queue);
-
-                printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=0\n",time,
-                cpu_0.cur_process->process_id,cpu_0.cur_process->time_remain);
-
-            }else if(compare_process(cpu_0.queue->start->process,cpu_0.cur_process)) {
-                push(cpu_0.queue, cpu_0.cur_process);
-                cpu_0.cur_process = pop(cpu_0.queue);
-                printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=0\n",time,
-                cpu_0.cur_process->process_id,cpu_0.cur_process->time_remain);
+                    processors[i].cur_process = NULL;
+                // }else {
+                //     printf("This should not happen now!");
+                // }
             }
         }
 
+        // Check if all processes are done
+        if(processes_arrived == num_processes && total_processes_remaining == 0) {
+            print_statistics(all_processes,num_processes,time);
+            return;
+        }
 
 
+        // Start any processes if possible
+        for(int i = 0; i < num_processors; i++) {
+            CPU *cpu_current = processors + i;
+
+            // Check if any process is waiting to be executed
+            if(cpu_current->queue->size >= 1) {
+                if(cpu_current->cur_process == NULL) {
+                    
+                    cpu_current->cur_process = pop(cpu_current->queue);
+                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=0\n",time,
+                    cpu_current->cur_process->process_id,cpu_current->cur_process->time_remain);
+
+                }else if(compare_process(cpu_current->queue->start->process,cpu_current->cur_process)) {
+                    push(cpu_current->queue, cpu_current->cur_process);
+                    cpu_current->cur_process = pop(cpu_current->queue);
+                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=0\n",time,
+                    cpu_current->cur_process->process_id,cpu_current->cur_process->time_remain);
+                }
+            }
+            if(cpu_current->cur_process != NULL) {
+                cpu_current->cur_process->time_remain--;
+            }
+        }
+
+/*         
         if(cpu_0.cur_process != NULL) {
             cpu_0.cur_process->time_remain--;
         }else if(cpu_0.queue->size == 0) {
             print_statistics(all_processes,num_processes,time);
             return;
         }
+
+ */
 
     }
     
@@ -150,17 +216,15 @@ void print_statistics(Process* all_processes, int num_processes, int makespan) {
     double avg_turnaround = 0, max_overhead, avg_overhead = 0;
     for(int i = 0; i < num_processes; i++) {
         Process cur = all_processes[i];
-        printf("%u %u %u %d %u %u %u\n", cur.time_arrived, cur.process_id, cur.execution_time,
-        cur.parallelisable,cur.subprocess_id,cur.time_remain,cur.time_finished);
-        double turnaround = (int) (cur.time_finished - cur.time_arrived);
+        double turnaround = cur.time_finished - cur.time_arrived;
         double overhead = turnaround / cur.execution_time;
         avg_turnaround += turnaround;
         avg_overhead += overhead;
         max_overhead = overhead > max_overhead ? overhead : max_overhead;
     }
 
-    printf("Turnaround time %lf\n",avg_turnaround / num_processes);
-    printf("Time overhead %lf %lf\n",max_overhead,avg_overhead / num_processes);
+    printf("Turnaround time %.0lf\n",ceil(avg_turnaround / num_processes));
+    printf("Time overhead %.2lf %.2lf\n",max_overhead,avg_overhead / num_processes);
     printf("Makespan %d\n",makespan);
 }
 
