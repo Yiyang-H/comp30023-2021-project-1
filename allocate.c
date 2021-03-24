@@ -16,6 +16,7 @@ void task_4(CPU*, int, Process*, int);
 int count_line(char*);
 void print_statistics(Process*, int, int);
 void print_queue(Pqueue*);
+int total_processes_remaining(Process*, int, int);
 
 
 int main(int argc, char** argv) {
@@ -70,7 +71,7 @@ int main(int argc, char** argv) {
 void task_1(CPU* processors, int num_processors, Process* all_processes,
  int num_processes) {
 
-    int processes_arrived = 0, total_processes_remaining = 0;
+    int processes_arrived = 0;
     for(unsigned int time = 0; time < 500; time++) {
 
      //   printf("Time:%d, Process_arrived:%d, Process_remaining:%d\n",time,processes_arrived,total_processes_remaining);
@@ -81,7 +82,6 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
             if(all_processes[i].time_arrived == time) {
                 push(main, all_processes + i);
                 processes_arrived++;
-                total_processes_remaining++;
             }else {
                 break;
             }
@@ -93,6 +93,15 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
             if(!(temp->parallelisable)) {
                 CPU *tem = soonest_cpu(processors, num_processors);
                 push(tem->queue, temp);
+            }else {
+                if(num_processors == 1) {
+                    // Push onto the only processor
+                    push(processors->queue, temp);
+                }else if(num_processors == 2) {
+                    
+                }else {
+
+                }
             }
 //             if(num_processors == 1) {
 //                 push(processors[0].queue,temp);
@@ -139,13 +148,13 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
         free_queue(main);
 
         // Check any current processes are done
+        
         for(int i = 0; i < num_processors; i++) {
             Process *current = processors[i].cur_process;
             if(current != NULL && current->time_remain == 0) {
              //   if(current->parent_process == NULL) {
-                    total_processes_remaining--;
                     printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
-                        current->process_id,total_processes_remaining);
+                        current->process_id,total_processes_remaining(all_processes,num_processes,time));
                     current->time_finished = time;
 
                     processors[i].cur_process = NULL;
@@ -156,7 +165,7 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
         }
 
         // Check if all processes are done
-        if(processes_arrived == num_processes && total_processes_remaining == 0) {
+        if(processes_arrived == num_processes && total_processes_remaining(all_processes, num_processes,time) == 0) {
             print_statistics(all_processes,num_processes,time);
             return;
         }
@@ -246,4 +255,14 @@ void print_queue(Pqueue* queue) {
         cur = cur->next;
     }
     printf("\n");
+}
+
+int total_processes_remaining(Process* all_processes, int num_processes, int time) {
+    int num = 0;
+    for(int i = 0; i < num_processes; i++) {
+        if(all_processes[i].time_arrived <= time && all_processes[i].time_remain > 0) {
+            num++;
+        }
+    }
+    return num;
 }
