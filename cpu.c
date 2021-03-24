@@ -1,20 +1,8 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "cpu.h"
 #include "pqueue.h"
-
-/* void new_process(CPU* cpu, Process* process) {
-    cpu->total_processes_remaining += process->time_remain[cpu->cur_subprocess_id];
-    push(cpu->queue, process);
-}
-*/
-
-/* 
-Process* execute_process(CPU* cpu) {
-
-}
- */
-
 
 unsigned int total_time_remain(CPU* cpu) {
     int total_time = 0;
@@ -38,4 +26,23 @@ CPU *soonest_cpu(CPU *cpu, int num) {
         }
     }
     return min;
+}
+
+CPU *soonest_cpu_unused(CPU *cpu, int num, int *used_cpu_list) {
+    int min_index = -1;
+    for(int i = 0; i < num; i++) {
+        if(!used_cpu_list[i]) {
+            if(min_index == -1) {
+                min_index = i;
+                continue;
+            }
+            if(total_time_remain(cpu + i) < total_time_remain(cpu + min_index)) {
+                min_index = i;
+            }
+        }
+    }
+    if(min_index == -1) {
+        printf("Something wrong!\n");
+    }
+    return cpu + min_index;
 }

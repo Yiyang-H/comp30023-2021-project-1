@@ -115,49 +115,29 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                     push(processors[0].queue, sub_0);
                     push(processors[1].queue, sub_1);
                 } else {
+                    int x = temp->execution_time;
+                    int k = num_processors > x ? x : num_processors;
+                    int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
+                    temp->num_subprocess = k;
+                    int used_cpu_list[num_processors];
+                    for(int i = 0; i < num_processors; i++) {
+                        used_cpu_list[i] = 0;
+                    }
+                    
+
+                    for(int i = 0; i < k; i++) {
+                        Process *subprocess = malloc(sizeof(*subprocess));
+                        *subprocess = *temp;
+                        subprocess->parent_process = temp;
+                        subprocess->subprocess_id = i;
+                        subprocess->time_remain = sub_exe_time;
+                        // Find a cpu which is hasn't been used
+                        CPU* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
+                        push(tem->queue,subprocess);
+                    }
 
                 }
             }
-//             if(num_processors == 1) {
-//                 push(processors[0].queue,temp);
-//             }else if(num_processors == 2){
-//                 if(total_time_remain(processors) <= total_time_remain(processors + 1)) {
-//                     push(processors[0].queue,temp);
-//                 }else {
-//                     push(processors[1].queue,temp);
-//                 }
-
-
-// /*                 if(temp->parallelisable) {
-//                     int k;
-//                     unsigned int x = temp->execution_time;
-//                     if(num_processors == 2) {
-//                         k = 2;
-//                     }else {
-//                         k = num_processors > x ? x : num_processors;
-//                     }
-//                     unsigned int subprocess_execution = ceil(x / k) + 1;
-
-//                     // Create k subprocesses
-//                     for(int i = 0; i < k; i++) {
-//                         Process *subprocess = malloc(sizeof(*subprocess));
-//                         *subprocess = *temp;
-//                         subprocess->parallelisable = false;
-//                         subprocess->parent_process = temp;
-//                         subprocess->subprocess_id = i;
-//                         subprocess->execution_time = subprocess_execution;
-//                         subprocess->time_remain = subprocess_execution;
-//                         new_process(soonest_cpu())
-//                     }
-//                     // what happen when execution_time == 1?
-//                     // Set subprocess_id of cpu to 0 and 1
-//                     // Set time_remain
-//                      */
-//                // }
-
-                
-
-//             }
         }
         // Free the main queue
         free_queue(main);
@@ -236,17 +216,6 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                 cpu_current->cur_process->time_remain--;
             }
         }
-
-/*         
-        if(cpu_0.cur_process != NULL) {
-            cpu_0.cur_process->time_remain--;
-        }else if(cpu_0.queue->size == 0) {
-            print_statistics(all_processes,num_processes,time);
-            return;
-        }
-
- */
-
     }
     
 
@@ -285,6 +254,9 @@ void print_statistics(Process* all_processes, int num_processes, int makespan) {
 }
 
 void print_queue(Pqueue* queue) {
+    if(queue == NULL) {
+        printf("This queue does not exist\n");
+    }
     if(queue->size == 0) {
         printf("This queue has no item");
         return;
