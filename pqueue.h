@@ -21,6 +21,7 @@ typedef struct process {
     bool parallelisable;
     Process* parent_process;
     unsigned int subprocess_id;
+    unsigned int num_subprocess;
     unsigned int time_remain;
     unsigned int time_finished;
 }Process;

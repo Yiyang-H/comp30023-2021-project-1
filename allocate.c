@@ -98,8 +98,23 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                     // Push onto the only processor
                     push(processors->queue, temp);
                 }else if(num_processors == 2) {
-                    
-                }else {
+                    int sub_exe_time = ceil((double)temp->execution_time / 2) + 1;
+                    temp->num_subprocess = 2;
+                    Process *sub_0 = malloc(sizeof(*sub_0));
+                    Process *sub_1 = malloc(sizeof(*sub_1));
+                    *sub_0 = *temp;
+                    sub_0->parent_process = temp;
+                    sub_0->subprocess_id = 0;
+                    sub_0->time_remain = sub_exe_time;
+
+                    *sub_1 = *temp;
+                    sub_1->parent_process = temp;
+                    sub_1->subprocess_id = 1;
+                    sub_1->time_remain = sub_exe_time;
+
+                    push(processors[0].queue, sub_0);
+                    push(processors[1].queue, sub_1);
+                } else {
 
                 }
             }
@@ -152,15 +167,25 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
         for(int i = 0; i < num_processors; i++) {
             Process *current = processors[i].cur_process;
             if(current != NULL && current->time_remain == 0) {
-             //   if(current->parent_process == NULL) {
+                if(current->parent_process == NULL) {
                     printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
                         current->process_id,total_processes_remaining(all_processes,num_processes,time));
                     current->time_finished = time;
 
                     processors[i].cur_process = NULL;
-                // }else {
-                //     printf("This should not happen now!");
-                // }
+                }else {
+                    // Reduce the num_subprocess in parent process
+                    Process* parent = current->parent_process;
+                    parent->num_subprocess--;
+                    if(parent->num_subprocess == 0) {
+                        parent->time_remain = 0;
+                        parent->time_finished = time;
+                        printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
+                        parent->process_id,total_processes_remaining(all_processes,num_processes,time));                    }
+                    
+                    processors[i].cur_process = NULL;
+                    free(current);
+                }
             }
         }
 
@@ -180,16 +205,31 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                 if(cpu_current->cur_process == NULL) {
                     
                     cpu_current->cur_process = pop(cpu_current->queue);
-                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
-                    cpu_current->cur_process->process_id,
-                    cpu_current->cur_process->time_remain,cpu_current->cpu_id);
+                    Process* proc_cuurent = cpu_current->cur_process;
+                    if(proc_cuurent->parent_process == NULL) {
+                        printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
+                        proc_cuurent->process_id,
+                        proc_cuurent->time_remain,cpu_current->cpu_id);
+                    }else {
+                        printf("%d,RUNNING,pid=%d.%d,remaining_time=%d,cpu=%d\n",time,
+                        proc_cuurent->process_id,proc_cuurent->subprocess_id,
+                        proc_cuurent->time_remain,cpu_current->cpu_id);
+                    }
+
 
                 }else if(compare_process(cpu_current->queue->start->process,cpu_current->cur_process)) {
                     push(cpu_current->queue, cpu_current->cur_process);
                     cpu_current->cur_process = pop(cpu_current->queue);
-                    printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
-                    cpu_current->cur_process->process_id,
-                    cpu_current->cur_process->time_remain,cpu_current->cpu_id);
+                    Process* proc_cuurent = cpu_current->cur_process;
+                    if(proc_cuurent->parent_process == NULL) {
+                        printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
+                        proc_cuurent->process_id,
+                        proc_cuurent->time_remain,cpu_current->cpu_id);
+                    }else {
+                        printf("%d,RUNNING,pid=%d.%d,remaining_time=%d,cpu=%d\n",time,
+                        proc_cuurent->process_id,proc_cuurent->subprocess_id,
+                        proc_cuurent->time_remain,cpu_current->cpu_id);
+                    }
                 }
             }
             if(cpu_current->cur_process != NULL) {
