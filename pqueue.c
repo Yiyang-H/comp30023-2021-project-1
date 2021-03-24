@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "pqueue.h"
 
@@ -52,6 +53,7 @@ void push(Pqueue *queue, Process *process) {
     }
 
     Node *cur = queue->start;
+    bool end_of_queue = false;
     // Check if the new process is the start of the queue
     if(!compare_process(cur->process,process)) {
         queue->start = node;
@@ -61,19 +63,26 @@ void push(Pqueue *queue, Process *process) {
         // If the queue has at least one item, find a suitable position
         while(compare_process(cur->process,process)) {
             if(queue->end == cur) {
+                end_of_queue = true;
                 break;
             }
             cur = cur->next;
         }
-        if(queue->end != cur) {
+        if(end_of_queue) {
+            cur->next = node;
+            node->prev = cur;
+            node->next = NULL;
+        }else {
             cur = cur->prev;
+            node->next = cur->next;
+            node->prev = cur;
+            cur->next = node;
+            node->next->prev = node;
         }
-        node->next = cur->next;
-        node->prev = cur;
-        cur->next = node;
+
     }
 
-    if(queue->end == cur) {
+    if(end_of_queue) {
         queue->end = node;
     }
 
