@@ -111,7 +111,6 @@ int main(int argc, char** argv) {
                         parent->process_id,total_processes_remaining(all_processes,num_processes,time));                    }
                     
                     processors[i].cur_process = NULL;
-                    printf("%d,Free pid %d.%d\n",time,current->process_id,current->subprocess_id);
                     free(current);
                 }
             }
@@ -195,7 +194,7 @@ void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
 }
 
 void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue) {
-    
+
 }
 
 int count_line(char* filename) {
