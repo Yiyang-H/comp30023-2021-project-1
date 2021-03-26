@@ -7,22 +7,27 @@
 #include "pqueue.h"
 #include "cpu.h"
 
-// Each task takes a list of cpu and processes
-void task_1(CPU*, int, Process*, int);
-void task_2(CPU*, int, Process*, int);
-void task_3(CPU*, int, Process*, int);
-void task_4(CPU*, int, Process*, int);
+// Follow project description to allocate processes
+void task(cpu_t*, int, Pqueue*);
+
+// Modify the algorithm to achieve a lower makespan
+void challenge(cpu_t*, int, Pqueue*);
+
 
 int count_line(char*);
-void print_statistics(Process*, int, int);
+void print_statistics(process_t*, int, int);
 void print_queue(Pqueue*);
-int total_processes_remaining(Process*, int, int);
+int total_processes_remaining(process_t*, int, int);
+double my_round(double data);
+
 
 
 int main(int argc, char** argv) {
     int num_processors,num_processes;
+    bool is_challenge = false;
     FILE *fp;
 
+    // Reads command line arguments and initialise
     for(int i = 1; i < argc; i++) {
         if(!strcmp(argv[i], "-f")) {
             num_processes = count_line(argv[i+1]);
@@ -31,19 +36,23 @@ int main(int argc, char** argv) {
         if(!strcmp(argv[i], "-p")) {
             num_processors = atoi(argv[i+1]);
         }
+        if(!strcmp(argv[i], "-c")) {
+            is_challenge = true;
+        }
     }
 
-    CPU processors[num_processors];
+    // Initialise all processors
+    cpu_t processors[num_processors];
     for(int i = 0; i < num_processors; i++) {
         processors[i].cpu_id = i;
         processors[i].cur_process = NULL;
         processors[i].queue = new_queue();
     }
 
-    // Read all processes and put them in an array
+    // Initialise all processes and put them in an array
     unsigned int time_arr, pro_id, exe_time;
     char par;
-    Process all_processes[num_processes];
+    process_t all_processes[num_processes];
     for(int i = 0; fscanf(fp,"%u %u %u %c\n",&time_arr,&pro_id,&exe_time,&par) != EOF; i++) {
         all_processes[i].time_arrived = time_arr;
         all_processes[i].process_id = pro_id;
@@ -54,33 +63,17 @@ int main(int argc, char** argv) {
         all_processes[i].time_remain = exe_time;
         all_processes[i].time_finished = 0;
     }
+
     fclose(fp);
 
 
-    task_1(processors,num_processors,all_processes,num_processes);
-    
-    
-    // Free all memeory allocated to queues
-    for(int i = 0; i < num_processors; i++) {
-        free_queue(processors[i].queue);
-    }
-    
-    return 0; 
-}
-
-void task_1(CPU* processors, int num_processors, Process* all_processes,
- int num_processes) {
-
     int processes_arrived = 0;
     for(unsigned int time = 0; time < 500; time++) {
-
-     //   printf("Time:%d, Process_arrived:%d, Process_remaining:%d\n",time,processes_arrived,total_processes_remaining);
-
         // Check process arrive at this time, push them onto the main queue
-        Pqueue *main = new_queue();
+        Pqueue *main_queue = new_queue();
         for(int i = processes_arrived; i < num_processes; i++) {
             if(all_processes[i].time_arrived == time) {
-                push(main, all_processes + i);
+                push(main_queue, all_processes + i);
                 processes_arrived++;
             }else {
                 break;
@@ -88,64 +81,18 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
         }
 
         // Push all current process onto cpu's queue
-        while(main->size > 0) {
-            Process *temp = pop(main);
-            if(!(temp->parallelisable)) {
-                CPU *tem = soonest_cpu(processors, num_processors);
-                push(tem->queue, temp);
-            }else {
-                if(num_processors == 1) {
-                    // Push onto the only processor
-                    push(processors->queue, temp);
-                }else if(num_processors == 2) {
-                    int sub_exe_time = ceil((double)temp->execution_time / 2) + 1;
-                    temp->num_subprocess = 2;
-                    Process *sub_0 = malloc(sizeof(*sub_0));
-                    Process *sub_1 = malloc(sizeof(*sub_1));
-                    *sub_0 = *temp;
-                    sub_0->parent_process = temp;
-                    sub_0->subprocess_id = 0;
-                    sub_0->time_remain = sub_exe_time;
-
-                    *sub_1 = *temp;
-                    sub_1->parent_process = temp;
-                    sub_1->subprocess_id = 1;
-                    sub_1->time_remain = sub_exe_time;
-
-                    push(processors[0].queue, sub_0);
-                    push(processors[1].queue, sub_1);
-                } else {
-                    int x = temp->execution_time;
-                    int k = num_processors > x ? x : num_processors;
-                    int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
-                    temp->num_subprocess = k;
-                    int used_cpu_list[num_processors];
-                    for(int i = 0; i < num_processors; i++) {
-                        used_cpu_list[i] = 0;
-                    }
-                    
-
-                    for(int i = 0; i < k; i++) {
-                        Process *subprocess = malloc(sizeof(*subprocess));
-                        *subprocess = *temp;
-                        subprocess->parent_process = temp;
-                        subprocess->subprocess_id = i;
-                        subprocess->time_remain = sub_exe_time;
-                        // Find a cpu which is hasn't been used
-                        CPU* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
-                        push(tem->queue,subprocess);
-                    }
-
-                }
-            }
+        if(!is_challenge) {
+            task(processors,num_processors,main_queue);
+        }else {
+            challenge(processors,num_processors,main_queue);
         }
+        
         // Free the main queue
-        free_queue(main);
+        free_queue(main_queue);
 
         // Check any current processes are done
-        
         for(int i = 0; i < num_processors; i++) {
-            Process *current = processors[i].cur_process;
+            process_t *current = processors[i].cur_process;
             if(current != NULL && current->time_remain == 0) {
                 if(current->parent_process == NULL) {
                     printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
@@ -155,7 +102,7 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                     processors[i].cur_process = NULL;
                 }else {
                     // Reduce the num_subprocess in parent process
-                    Process* parent = current->parent_process;
+                    process_t* parent = current->parent_process;
                     parent->num_subprocess--;
                     if(parent->num_subprocess == 0) {
                         parent->time_remain = 0;
@@ -164,61 +111,91 @@ void task_1(CPU* processors, int num_processors, Process* all_processes,
                         parent->process_id,total_processes_remaining(all_processes,num_processes,time));                    }
                     
                     processors[i].cur_process = NULL;
+                    printf("%d,Free pid %d.%d\n",time,current->process_id,current->subprocess_id);
                     free(current);
                 }
             }
         }
 
         // Check if all processes are done
-        if(processes_arrived == num_processes && total_processes_remaining(all_processes, num_processes,time) == 0) {
+        if(processes_arrived == num_processes && 
+        total_processes_remaining(all_processes, num_processes,time) == 0) {
             print_statistics(all_processes,num_processes,time);
-            return;
+            break;
         }
 
-
-        // Start any processes if possible
+        // Execute any processes if possible
         for(int i = 0; i < num_processors; i++) {
-            CPU *cpu_current = processors + i;
-
-            // Check if any process is waiting to be executed
-            if(cpu_current->queue->size >= 1) {
-                if(cpu_current->cur_process == NULL) {
-                    
-                    cpu_current->cur_process = pop(cpu_current->queue);
-                    Process* proc_cuurent = cpu_current->cur_process;
-                    if(proc_cuurent->parent_process == NULL) {
-                        printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
-                        proc_cuurent->process_id,
-                        proc_cuurent->time_remain,cpu_current->cpu_id);
-                    }else {
-                        printf("%d,RUNNING,pid=%d.%d,remaining_time=%d,cpu=%d\n",time,
-                        proc_cuurent->process_id,proc_cuurent->subprocess_id,
-                        proc_cuurent->time_remain,cpu_current->cpu_id);
-                    }
-
-
-                }else if(compare_process(cpu_current->queue->start->process,cpu_current->cur_process)) {
-                    push(cpu_current->queue, cpu_current->cur_process);
-                    cpu_current->cur_process = pop(cpu_current->queue);
-                    Process* proc_cuurent = cpu_current->cur_process;
-                    if(proc_cuurent->parent_process == NULL) {
-                        printf("%d,RUNNING,pid=%d,remaining_time=%d,cpu=%d\n",time,
-                        proc_cuurent->process_id,
-                        proc_cuurent->time_remain,cpu_current->cpu_id);
-                    }else {
-                        printf("%d,RUNNING,pid=%d.%d,remaining_time=%d,cpu=%d\n",time,
-                        proc_cuurent->process_id,proc_cuurent->subprocess_id,
-                        proc_cuurent->time_remain,cpu_current->cpu_id);
-                    }
-                }
-            }
-            if(cpu_current->cur_process != NULL) {
-                cpu_current->cur_process->time_remain--;
-            }
+            execute_process(processors+i,time);
         }
     }
     
 
+
+    // Free all memeory allocated to queues
+    for(int i = 0; i < num_processors; i++) {
+        free_queue(processors[i].queue);
+    }
+    
+    return 0; 
+}
+
+
+void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
+    while(main_queue->size > 0) {
+        process_t *temp = pop(main_queue);
+        if(!(temp->parallelisable)) {
+            cpu_t *tem = soonest_cpu(processors, num_processors);
+            push(tem->queue, temp);
+        }else {
+            if(num_processors == 1) {
+                // Push onto the only processor
+                push(processors->queue, temp);
+            }else if(num_processors == 2) {
+                int sub_exe_time = ceil((double)temp->execution_time / 2) + 1;
+                temp->num_subprocess = 2;
+                process_t *sub_0 = malloc(sizeof(*sub_0));
+                process_t *sub_1 = malloc(sizeof(*sub_1));
+                *sub_0 = *temp;
+                sub_0->parent_process = temp;
+                sub_0->subprocess_id = 0;
+                sub_0->time_remain = sub_exe_time;
+
+                *sub_1 = *temp;
+                sub_1->parent_process = temp;
+                sub_1->subprocess_id = 1;
+                sub_1->time_remain = sub_exe_time;
+
+                push(processors[0].queue, sub_0);
+                push(processors[1].queue, sub_1);
+            } else {
+                int x = temp->execution_time;
+                int k = num_processors > x ? x : num_processors;
+                int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
+                temp->num_subprocess = k;
+                int used_cpu_list[num_processors];
+                for(int i = 0; i < num_processors; i++) {
+                    used_cpu_list[i] = 0;
+                }
+                
+
+                for(int i = 0; i < k; i++) {
+                    process_t *subprocess = malloc(sizeof(*subprocess));
+                    *subprocess = *temp;
+                    subprocess->parent_process = temp;
+                    subprocess->subprocess_id = i;
+                    subprocess->time_remain = sub_exe_time;
+                    // Find a cpu which is hasn't been used
+                    cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
+                    push(tem->queue,subprocess);
+                }
+            }
+        }
+    }
+}
+
+void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue) {
+    
 }
 
 int count_line(char* filename) {
@@ -236,20 +213,23 @@ int count_line(char* filename) {
     return line_num;
 }
 
+double my_round(double data) {
+    return round(data * 100) / 100;
+}
 
-void print_statistics(Process* all_processes, int num_processes, int makespan) {
-    double avg_turnaround = 0, max_overhead, avg_overhead = 0;
+void print_statistics(process_t* all_processes, int num_processes, int makespan) {
+    double avg_turnaround = 0, max_overhead = 0, avg_overhead = 0;
     for(int i = 0; i < num_processes; i++) {
-        Process cur = all_processes[i];
-        double turnaround = cur.time_finished - cur.time_arrived;
-        double overhead = turnaround / cur.execution_time;
+        process_t *cur = all_processes + i;
+        double turnaround = cur->time_finished - cur->time_arrived;
+        double overhead = turnaround / cur->execution_time;
         avg_turnaround += turnaround;
         avg_overhead += overhead;
         max_overhead = overhead > max_overhead ? overhead : max_overhead;
     }
 
     printf("Turnaround time %.0lf\n",ceil(avg_turnaround / num_processes));
-    printf("Time overhead %.2lf %.2lf\n",max_overhead,avg_overhead / num_processes);
+    printf("Time overhead %g %g\n",my_round(max_overhead),my_round(avg_overhead / num_processes));
     printf("Makespan %d\n",makespan);
 }
 
@@ -269,7 +249,7 @@ void print_queue(Pqueue* queue) {
     printf("\n");
 }
 
-int total_processes_remaining(Process* all_processes, int num_processes, int time) {
+int total_processes_remaining(process_t* all_processes, int num_processes, int time) {
     int num = 0;
     for(int i = 0; i < num_processes; i++) {
         if(all_processes[i].time_arrived <= time && all_processes[i].time_remain > 0) {

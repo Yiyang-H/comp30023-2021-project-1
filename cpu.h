@@ -3,17 +3,18 @@
 
 #include "pqueue.h"
 
-typedef struct cpu CPU;
+typedef struct cpu cpu_t;
 
 typedef struct cpu {
     int cpu_id;
-    Process *cur_process;
+    process_t *cur_process;
     Pqueue *queue;
-}CPU;
+}cpu_t;
 
-unsigned int total_time_remain(CPU* cpu);
+unsigned int total_time_remain(cpu_t* cpu);
 
-CPU *soonest_cpu(CPU *cpu, int num);
-CPU *soonest_cpu_unused(CPU *cpu, int num, int *used_cpu_list);
+cpu_t *soonest_cpu(cpu_t *cpu, int num);
+cpu_t *soonest_cpu_unused(cpu_t *cpu, int num, int *used_cpu_list);
+void execute_process(cpu_t *cpu_current, int time);
 
 #endif

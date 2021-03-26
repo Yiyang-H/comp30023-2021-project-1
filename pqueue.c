@@ -8,7 +8,7 @@
 
 void free_node(Node *node);
 Node *new_node();
-bool compare_process(Process *p1, Process *p2);
+bool compare_process(process_t *p1, process_t *p2);
 
 Pqueue *new_queue() {
     Pqueue *queue = malloc(sizeof(*queue));
@@ -37,7 +37,7 @@ void free_queue(Pqueue *queue) {
 }
 
 // Push a process onto the queue according to their remaining time
-void push(Pqueue *queue, Process *process) {
+void push(Pqueue *queue, process_t *process) {
     assert(queue != NULL);
     
     Node *node = new_node();
@@ -91,10 +91,10 @@ void push(Pqueue *queue, Process *process) {
 }
 
 // Pop the start of the queue(lowest remaining time)
-Process *pop(Pqueue *queue) {
+process_t *pop(Pqueue *queue) {
     
     Node *node = queue->start;
-    Process *p = node->process;
+    process_t *p = node->process;
 
     if(queue->size == 1) {
         queue->start = NULL;
@@ -122,7 +122,7 @@ Node *new_node() {
 }
 
 // Compare two process and return true if p1 should be in front of p2
-bool compare_process(Process *p1, Process *p2){
+bool compare_process(process_t *p1, process_t *p2){
     if(p1->time_remain < p2->time_remain) {
         return true;
     }

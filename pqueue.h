@@ -6,7 +6,7 @@
 // Defines a priority queue data structure
 typedef struct pqueue Pqueue;
 typedef struct node Node;
-typedef struct process Process;
+typedef struct process process_t;
 
 typedef struct pqueue {
     Node *start;
@@ -19,31 +19,29 @@ typedef struct process {
     unsigned int process_id;
     unsigned int execution_time;
     bool parallelisable;
-    Process* parent_process;
+    process_t* parent_process;
     unsigned int subprocess_id;
     unsigned int num_subprocess;
     unsigned int time_remain;
     unsigned int time_finished;
-}Process;
+}process_t;
 
 typedef struct node {
-    Process *process;
+    process_t *process;
     Node *prev;
     Node *next;
 }Node;
-
-
 
 Pqueue *new_queue();
 
 void free_queue(Pqueue *queue);
 
-void push(Pqueue *queue, Process *process);
+void push(Pqueue *queue, process_t *process);
 
-Process *pop(Pqueue *queue);
+process_t *pop(Pqueue *queue);
 
-bool compare_process(Process *p1, Process *p2);
+bool compare_process(process_t *p1, process_t *p2);
 
-Process *create_subprocess(Process *parent, int sub_id, int subprocess_execution);
+process_t *create_subprocess(process_t *parent, int sub_id, int subprocess_execution);
 
 #endif
