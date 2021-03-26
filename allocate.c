@@ -194,6 +194,56 @@ void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
 }
 
 void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue) {
+    while(main_queue->size > 0) {
+        process_t *temp = pop_longest(main_queue);
+        if(!(temp->parallelisable)) {
+            cpu_t *tem = soonest_cpu(processors, num_processors);
+            push(tem->queue, temp);
+        }else {
+            if(num_processors == 1) {
+                // Push onto the only processor
+                push(processors->queue, temp);
+            }else if(num_processors == 2) {
+                int sub_exe_time = ceil((double)temp->execution_time / 2) + 1;
+                temp->num_subprocess = 2;
+                process_t *sub_0 = malloc(sizeof(*sub_0));
+                process_t *sub_1 = malloc(sizeof(*sub_1));
+                *sub_0 = *temp;
+                sub_0->parent_process = temp;
+                sub_0->subprocess_id = 0;
+                sub_0->time_remain = sub_exe_time;
+
+                *sub_1 = *temp;
+                sub_1->parent_process = temp;
+                sub_1->subprocess_id = 1;
+                sub_1->time_remain = sub_exe_time;
+
+                push(processors[0].queue, sub_0);
+                push(processors[1].queue, sub_1);
+            } else {
+                int x = temp->execution_time;
+                int k = num_processors > x ? x : num_processors;
+                int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
+                temp->num_subprocess = k;
+                int used_cpu_list[num_processors];
+                for(int i = 0; i < num_processors; i++) {
+                    used_cpu_list[i] = 0;
+                }
+                
+
+                for(int i = 0; i < k; i++) {
+                    process_t *subprocess = malloc(sizeof(*subprocess));
+                    *subprocess = *temp;
+                    subprocess->parent_process = temp;
+                    subprocess->subprocess_id = i;
+                    subprocess->time_remain = sub_exe_time;
+                    // Find a cpu which is hasn't been used
+                    cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
+                    push(tem->queue,subprocess);
+                }
+            }
+        }
+    }
 
 }
 

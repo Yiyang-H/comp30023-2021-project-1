@@ -110,6 +110,23 @@ process_t *pop(Pqueue *queue) {
     return p;
 }
 
+process_t *pop_longest(Pqueue *queue) {
+    Node *node = queue->end;
+    process_t *p = node->process;
+
+    if(queue->size == 1) {
+        queue->start = NULL;
+        queue->end = NULL;
+    }else {
+        queue->end = node->prev;
+        queue->end->next = NULL;
+    }
+    
+    free_node(node);
+    queue->size--;
+    return p;
+}
+
 void free_node(Node *node) {
     free(node);
 }

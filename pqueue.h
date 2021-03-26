@@ -40,6 +40,8 @@ void push(Pqueue *queue, process_t *process);
 
 process_t *pop(Pqueue *queue);
 
+process_t *pop_longest(Pqueue *queue);
+
 bool compare_process(process_t *p1, process_t *p2);
 
 process_t *create_subprocess(process_t *parent, int sub_id, int subprocess_execution);
