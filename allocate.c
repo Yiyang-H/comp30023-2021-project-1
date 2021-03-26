@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 
 
     int processes_arrived = 0;
-    for(unsigned int time = 0; time < 500; time++) {
+    for(unsigned int time = 0; time < UINT_MAX; time++) {
         // Check process arrive at this time, push them onto the main queue
         Pqueue *main_queue = new_queue();
         for(int i = processes_arrived; i < num_processes; i++) {
