@@ -11,7 +11,9 @@
 void task(cpu_t*, int, Pqueue*);
 
 // Modify the algorithm to achieve a lower makespan
-void challenge(cpu_t*, int, Pqueue*);
+void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue, 
+process_t* all_processes, int num_processes, int time);
+int calc_remain_proc_exe_time(process_t* all_processes,int num_processes,int time);
 
 
 int count_line(char*);
@@ -84,7 +86,7 @@ int main(int argc, char** argv) {
         if(!is_challenge) {
             task(processors,num_processors,main_queue);
         }else {
-            challenge(processors,num_processors,main_queue);
+            challenge(processors,num_processors,main_queue,all_processes,num_processes,time);
         }
         
         // Free the main queue
@@ -193,55 +195,65 @@ void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
     }
 }
 
-void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue) {
+int calc_remain_proc_exe_time(process_t* all_processes,int num_processes,int time) {
+    int total = 0;
+    for(int i = 0; i < num_processes; i++) {
+        if((all_processes+i)->time_arrived > time) {
+            total += (all_processes+i)->execution_time;
+        }
+    }
+    return total;
+}
+
+void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue, 
+process_t* all_processes, int num_processes, int time) {
+    
+    unsigned int remain_proc_exe_time = calc_remain_proc_exe_time(all_processes,num_processes,time);
+    int max = all_processes->execution_time;
+    for(int i = 1; i < num_processes; i++) {
+        max = max > (all_processes+i)->execution_time ? max : (all_processes+i)->execution_time;
+    }
+    unsigned int threshold_time = num_processors * max;
+
     while(main_queue->size > 0) {
+        /*
+        1. Check the total remaining time of all processes
+            a) If taking a long time, not parallelising process
+            b) If remaining time less than some value, parallel processes
+        2. None of the cpu should be at rest
+        3. 
+
+        */
+
+        
+
         process_t *temp = pop_longest(main_queue);
-        if(!(temp->parallelisable)) {
+        
+        if(true) {
             cpu_t *tem = soonest_cpu(processors, num_processors);
             push(tem->queue, temp);
         }else {
-            if(num_processors == 1) {
-                // Push onto the only processor
-                push(processors->queue, temp);
-            }else if(num_processors == 2) {
-                int sub_exe_time = ceil((double)temp->execution_time / 2) + 1;
-                temp->num_subprocess = 2;
-                process_t *sub_0 = malloc(sizeof(*sub_0));
-                process_t *sub_1 = malloc(sizeof(*sub_1));
-                *sub_0 = *temp;
-                sub_0->parent_process = temp;
-                sub_0->subprocess_id = 0;
-                sub_0->time_remain = sub_exe_time;
-
-                *sub_1 = *temp;
-                sub_1->parent_process = temp;
-                sub_1->subprocess_id = 1;
-                sub_1->time_remain = sub_exe_time;
-
-                push(processors[0].queue, sub_0);
-                push(processors[1].queue, sub_1);
-            } else {
-                int x = temp->execution_time;
-                int k = num_processors > x ? x : num_processors;
-                int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
-                temp->num_subprocess = k;
-                int used_cpu_list[num_processors];
-                for(int i = 0; i < num_processors; i++) {
-                    used_cpu_list[i] = 0;
-                }
-                
-
-                for(int i = 0; i < k; i++) {
-                    process_t *subprocess = malloc(sizeof(*subprocess));
-                    *subprocess = *temp;
-                    subprocess->parent_process = temp;
-                    subprocess->subprocess_id = i;
-                    subprocess->time_remain = sub_exe_time;
-                    // Find a cpu which is hasn't been used
-                    cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
-                    push(tem->queue,subprocess);
-                }
+            int x = temp->execution_time;
+            int k = num_processors > x ? x : num_processors;
+            int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
+            temp->num_subprocess = k;
+            int used_cpu_list[num_processors];
+            for(int i = 0; i < num_processors; i++) {
+                used_cpu_list[i] = 0;
             }
+            
+
+            for(int i = 0; i < k; i++) {
+                process_t *subprocess = malloc(sizeof(*subprocess));
+                *subprocess = *temp;
+                subprocess->parent_process = temp;
+                subprocess->subprocess_id = i;
+                subprocess->time_remain = sub_exe_time;
+                // Find a cpu which is hasn't been used
+                cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
+                push(tem->queue,subprocess);
+            }
+            
         }
     }
 

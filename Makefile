@@ -14,3 +14,4 @@ pqueue.o: pqueue.c pqueue.h
 
 clean: 
 	rm -f allocate
+	rm -f *.o
