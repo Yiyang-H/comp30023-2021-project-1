@@ -42,7 +42,8 @@ cpu_t *soonest_cpu_unused(cpu_t *cpu, int num, int *used_cpu_list) {
         }
     }
     if(min_index == -1) {
-        printf("Something wrong!\n");
+        printf("Something wrong at soonest_cpu_unused\n");
+        exit(-1);
     }
     return cpu + min_index;
 }

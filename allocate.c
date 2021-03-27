@@ -14,6 +14,7 @@ void task(cpu_t*, int, Pqueue*);
 void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue, 
 process_t* all_processes, int num_processes, int time);
 int calc_remain_proc_exe_time(process_t* all_processes,int num_processes,int time);
+bool any_processor_free(cpu_t* processors,int num_processors);
 
 
 int count_line(char*);
@@ -70,12 +71,19 @@ int main(int argc, char** argv) {
 
 
     int processes_arrived = 0;
+
+    Pqueue *second_main_queue = new_queue();
     for(unsigned int time = 0; time < UINT_MAX; time++) {
         // Check process arrive at this time, push them onto the main queue
         Pqueue *main_queue = new_queue();
         for(int i = processes_arrived; i < num_processes; i++) {
             if(all_processes[i].time_arrived == time) {
-                push(main_queue, all_processes + i);
+                if(is_challenge) {
+                    push(second_main_queue, all_processes + i);
+                } else {
+                    push(main_queue, all_processes + i);
+                }
+               
                 processes_arrived++;
             }else {
                 break;
@@ -86,7 +94,7 @@ int main(int argc, char** argv) {
         if(!is_challenge) {
             task(processors,num_processors,main_queue);
         }else {
-            challenge(processors,num_processors,main_queue,all_processes,num_processes,time);
+            challenge(processors,num_processors,second_main_queue,all_processes,num_processes,time);
         }
         
         // Free the main queue
@@ -131,7 +139,7 @@ int main(int argc, char** argv) {
         }
     }
     
-
+    free_queue(second_main_queue);
 
     // Free all memeory allocated to queues
     for(int i = 0; i < num_processors; i++) {
@@ -188,6 +196,7 @@ void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
                     subprocess->time_remain = sub_exe_time;
                     // Find a cpu which is hasn't been used
                     cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
+                    //printf("\n cpu_id: %d \n", tem->cpu_id);
                     push(tem->queue,subprocess);
                 }
             }
@@ -205,23 +214,42 @@ int calc_remain_proc_exe_time(process_t* all_processes,int num_processes,int tim
     return total;
 }
 
+bool any_processor_free(cpu_t* processors,int num_processors) {
+    for(int i = 0; i < num_processors; i++) {
+        if(total_time_remain(processors+i) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue, 
 process_t* all_processes, int num_processes, int time) {
-    
-    unsigned int remain_proc_exe_time = calc_remain_proc_exe_time(all_processes,num_processes,time);
-    int max = all_processes->execution_time;
-    for(int i = 1; i < num_processes; i++) {
-        max = max > (all_processes+i)->execution_time ? max : (all_processes+i)->execution_time;
-    }
-    unsigned int threshold_time = num_processors * max;
 
-    while(main_queue->size > 0) {
+    /*
+    1. Simply push longest can pass 5 test, 2,3,7,8,9
+    2. If can solve for non-parallisible ?
+    
+    
+    */
+    
+    // unsigned int remain_proc_exe_time = calc_remain_proc_exe_time(all_processes,num_processes,time);
+    // int max = all_processes->execution_time;
+    // for(int i = 1; i < num_processes; i++) {
+    //     max = max > (all_processes+i)->execution_time ? max : (all_processes+i)->execution_time;
+    // }
+    // unsigned int threshold_time = num_processors * 20;
+
+    while(main_queue->size > 0 && any_processor_free(processors,num_processors)) {
         /*
         1. Check the total remaining time of all processes
             a) If taking a long time, not parallelising process
             b) If remaining time less than some value, parallel processes
         2. None of the cpu should be at rest
         3. 
+
+        Another approch:
+        Set a goal
 
         */
 
