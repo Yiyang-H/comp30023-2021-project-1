@@ -13,7 +13,6 @@ void task(cpu_t*, int, Pqueue*);
 // Modify the algorithm to achieve a lower makespan
 void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue, 
 process_t* all_processes, int num_processes, int time);
-int calc_remain_proc_exe_time(process_t* all_processes,int num_processes,int time);
 bool any_processor_free(cpu_t* processors,int num_processors);
 
 
@@ -196,22 +195,11 @@ void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
                     subprocess->time_remain = sub_exe_time;
                     // Find a cpu which is hasn't been used
                     cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
-                    //printf("\n cpu_id: %d \n", tem->cpu_id);
                     push(tem->queue,subprocess);
                 }
             }
         }
     }
-}
-
-int calc_remain_proc_exe_time(process_t* all_processes,int num_processes,int time) {
-    int total = 0;
-    for(int i = 0; i < num_processes; i++) {
-        if((all_processes+i)->time_arrived > time) {
-            total += (all_processes+i)->execution_time;
-        }
-    }
-    return total;
 }
 
 bool any_processor_free(cpu_t* processors,int num_processors) {
@@ -226,63 +214,10 @@ bool any_processor_free(cpu_t* processors,int num_processors) {
 void challenge(cpu_t* processors, int num_processors, Pqueue* main_queue, 
 process_t* all_processes, int num_processes, int time) {
 
-    /*
-    1. Simply push longest can pass 5 test, 2,3,7,8,9
-    2. If can solve for non-parallisible ?
-    
-    
-    */
-    
-    // unsigned int remain_proc_exe_time = calc_remain_proc_exe_time(all_processes,num_processes,time);
-    // int max = all_processes->execution_time;
-    // for(int i = 1; i < num_processes; i++) {
-    //     max = max > (all_processes+i)->execution_time ? max : (all_processes+i)->execution_time;
-    // }
-    // unsigned int threshold_time = num_processors * 20;
-
     while(main_queue->size > 0 && any_processor_free(processors,num_processors)) {
-        /*
-        1. Check the total remaining time of all processes
-            a) If taking a long time, not parallelising process
-            b) If remaining time less than some value, parallel processes
-        2. None of the cpu should be at rest
-        3. 
-
-        Another approch:
-        Set a goal
-
-        */
-
-        
-
         process_t *temp = pop_longest(main_queue);
-        
-        if(true) {
-            cpu_t *tem = soonest_cpu(processors, num_processors);
-            push(tem->queue, temp);
-        }else {
-            int x = temp->execution_time;
-            int k = num_processors > x ? x : num_processors;
-            int sub_exe_time = ceil((double)temp->execution_time / k) + 1;
-            temp->num_subprocess = k;
-            int used_cpu_list[num_processors];
-            for(int i = 0; i < num_processors; i++) {
-                used_cpu_list[i] = 0;
-            }
-            
-
-            for(int i = 0; i < k; i++) {
-                process_t *subprocess = malloc(sizeof(*subprocess));
-                *subprocess = *temp;
-                subprocess->parent_process = temp;
-                subprocess->subprocess_id = i;
-                subprocess->time_remain = sub_exe_time;
-                // Find a cpu which is hasn't been used
-                cpu_t* tem = soonest_cpu_unused(processors,num_processors,used_cpu_list);
-                push(tem->queue,subprocess);
-            }
-            
-        }
+        cpu_t *tem = soonest_cpu(processors, num_processors);
+        push(tem->queue, temp);
     }
 
 }

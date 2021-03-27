@@ -1,0 +1,1 @@
+My algorithm never parallelise process to reduce the overall time. Also I use a queue to store incoming processes, releasing the process with longest execution time when there is a cpu free to avoid long process come too late and extend the completion time. 
