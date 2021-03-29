@@ -4,4 +4,3 @@ cpu.o
 pqueue.o
 testcases
 autotest.sh
-report

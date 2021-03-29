@@ -7,6 +7,9 @@
 #include "pqueue.h"
 #include "cpu.h"
 
+#define TWO 2
+#define HUNDRED 100
+
 // Follow project description to allocate processes
 void task(cpu_t*, int, Pqueue*);
 
@@ -99,25 +102,47 @@ int main(int argc, char** argv) {
         // Free the main queue
         free_queue(main_queue);
 
+        int processes_just_arrived = 0;
+        for(int i = 0; i < num_processes; i++) {
+            if(all_processes[i].time_arrived == time) {
+                processes_just_arrived++;
+            }
+        }
+
+        int total_processes_remaining_before = total_processes_remaining(all_processes,num_processes,time);
+
+        int subprocesses_just_completed = 0;
+        for(int i = 0; i < num_processors; i++) {
+            process_t *current = processors[i].cur_process;
+            if(current != NULL && current->time_remain == 0) {
+                if(current->parent_process != NULL) {
+                    current->parent_process->num_subprocess--;
+                    if(current->parent_process->num_subprocess == 0) {
+                        subprocesses_just_completed++;
+                    }
+                }
+            }
+        }
+
         // Check any current processes are done
         for(int i = 0; i < num_processors; i++) {
             process_t *current = processors[i].cur_process;
             if(current != NULL && current->time_remain == 0) {
                 if(current->parent_process == NULL) {
                     printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
-                        current->process_id,total_processes_remaining(all_processes,num_processes,time));
+                        current->process_id,total_processes_remaining_before - processes_just_arrived - subprocesses_just_completed);
                     current->time_finished = time;
 
                     processors[i].cur_process = NULL;
                 }else {
                     // Reduce the num_subprocess in parent process
                     process_t* parent = current->parent_process;
-                    parent->num_subprocess--;
                     if(parent->num_subprocess == 0) {
+                        parent->num_subprocess = 1;
                         parent->time_remain = 0;
                         parent->time_finished = time;
                         printf("%d,FINISHED,pid=%d,proc_remaining=%d\n",time,
-                        parent->process_id,total_processes_remaining(all_processes,num_processes,time));                    }
+                        parent->process_id,total_processes_remaining_before - processes_just_arrived - subprocesses_just_completed);                   }
                     
                     processors[i].cur_process = NULL;
                     free(current);
@@ -159,9 +184,9 @@ void task(cpu_t* processors, int num_processors, Pqueue* main_queue) {
             if(num_processors == 1) {
                 // Push onto the only processor
                 push(processors->queue, temp);
-            }else if(num_processors == 2) {
-                int sub_exe_time = ceil((double)temp->execution_time / 2) + 1;
-                temp->num_subprocess = 2;
+            }else if(num_processors == TWO) {
+                int sub_exe_time = ceil((double)temp->execution_time / TWO) + 1;
+                temp->num_subprocess = TWO;
                 process_t *sub_0 = malloc(sizeof(*sub_0));
                 process_t *sub_1 = malloc(sizeof(*sub_1));
                 *sub_0 = *temp;
@@ -238,7 +263,7 @@ int count_line(char* filename) {
 }
 
 double my_round(double data) {
-    return round(data * 100) / 100;
+    return round(data * HUNDRED) / HUNDRED;
 }
 
 void print_statistics(process_t* all_processes, int num_processes, int makespan) {
